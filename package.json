@@ -1,0 +1,28 @@
+{
+  "name": "ts-delegate",
+  "version": "1.0.0",
+  "description": " Helper annotations, types, and methods for type-safe and JSDoc-preserving delegation in TypeScript",
+  "keywords": [
+    "typescript",
+    "delegate",
+    "delegation",
+    "efficiency"
+  ],
+  "homepage": "https://github.com/liwybloc/ts-delegate#readme",
+  "bugs": {
+    "url": "https://github.com/liwybloc/ts-delegate/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liwybloc/ts-delegate.git"
+  },
+  "license": "Apache-2.0",
+  "author": "liwybloc",
+  "type": "module",
+  "main": "dist/delegate.js",
+  "types": "dist/delegate.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc -d"
+  }
+}
