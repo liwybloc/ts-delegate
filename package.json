@@ -22,7 +22,6 @@
   "main": "dist/delegate.js",
   "types": "dist/delegate.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc -d"
   }
 }
