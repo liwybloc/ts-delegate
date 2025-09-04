@@ -1,6 +1,6 @@
 {
   "name": "ts-delegate",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": " Helper annotations, types, and methods for type-safe and JSDoc-preserving delegation in TypeScript",
   "keywords": [
     "typescript",

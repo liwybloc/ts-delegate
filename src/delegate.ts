@@ -120,7 +120,7 @@ export type DelegateStatic<T extends readonly any[], Self> =
  */
 export function delegate(self: any, delegateCandidates: any[]) {
     for(const candidate of delegateCandidates) {
-        for (const key in Object.getPrototypeOf(candidate)) {
+        for (const key of Object.getOwnPropertyNames(Object.getPrototypeOf(candidate))) {
             if(!candidate[key].isDelegated) continue;
             self[key] = candidate[key].bind(candidate);
         }
