@@ -140,13 +140,9 @@ export function delegate(self: any, delegateCandidates: any[]) {
         if(!delegationMetadata.has(proto)) continue;
         const metadata = delegationMetadata.get(proto)!;
 
-        for(const key in candidate) {
-            // skip if not delegated
-            if (!metadata.has(key))
-                continue;
-            
+        for (const key of metadata.keys()) {
             // define properties
-            setField(self, candidate, key, metadata);
+            setField(self, candidate, String(key), metadata);
         }
     }
 }
