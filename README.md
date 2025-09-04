@@ -44,8 +44,8 @@ class MyClass {
 
 ## Usage
 
-### Marking for delegation
-Methods can be marked for delegation with @DelegateMethod()
+### Marking methods for delegation
+Methods can be marked for delegation with @DelegateMethod(omitFirst?)
 
 #### Instance
 Does not need any arguments; supplying them won't do anything
@@ -79,8 +79,31 @@ class Static {
 }
 ```
 
-### Implementing delegated functions
-You can delegate with functions and a type
+### Marking fields for delegation
+Fields can be marked for delegation with @DelegateField(get?, set?)<br>
+Get and set default to true. When true, it allows that functonality.<br>
+If get is false, the field will return undefined. If set is false, the field can't be changed by the instance delegating the field.<br>
+The functionality is identical for static fields.
+
+```ts
+class MyClass {
+    // this can be read and edited by the delegating class
+    @DelegateField()
+    field: number = 100;
+
+    // this cannot be changed by the delegating class
+    @DelegateField(true, false)
+    constant: number = 9458694;
+
+    @DelegateField()
+    static STATIC_CONSTANT: string = "hello world!";
+}
+```
+
+#### Instance
+
+### Implementing delegated values
+You can delegate with a delegation function and a type implement
 #### Instance
 For delegating instances, you do Delegate<[array of classes]> and delegate(this, [array of instances]);
 ```ts
@@ -89,22 +112,30 @@ class OtherClass {
     myMethod() {
         ...
     }
+    @DelegateField()
+    field: number = 100;
 }
 class MyClass implements Delegate<[OtherClass]> {
     constructor() {
         delegate(this, [new OtherClass()]);
 
         this.myMethod();
+        console.log(this.field);
     }
 
     // This will confirm to typescript that it exists and will clone the structure of the other method, this still retains JSDoc and all functionality
     declare myMethod: OtherClass['myMethod'];
+
+    // reading this will print the field from the OtherClass instance
+    // setting will change it on both
+    declare field: OtherClass['field'];
 }
 ```
 #### Static
 For delegating static classes, you do DelegateStatic<[array of classes], (this)> with (this) as the class implementing it, and delegateStatic(this, [array of classes]);
 ```ts
 class StaticClass {
+    // delegating will add this.add(a, b);
     @DelegateMethod()
     static add(a: number, b: number): number {
         return a + b;
@@ -112,10 +143,15 @@ class StaticClass {
 
     // This will omit the first argument and it will be called with `this` in MyClass
     // This is useful if you want to have helper classes in different files that can interact with your class without requiring an instance of the helper class to be made
+    // delegating will then add this.change(to); without 'myClass'
     @DelegateMethod(true)
     static change(myClass: MyClass, to: number): void {
         myClass.value = to;
     }
+
+    // field can be read and changed through anything delegating this
+    @DelegateField()
+    static field: number = 9548693458;
 }
 class MyClass implements DelegateStatic<[StaticClass], MyClass> {
     value: number = 0;
@@ -128,11 +164,20 @@ class MyClass implements DelegateStatic<[StaticClass], MyClass> {
         // first argument is omitted and replaced with `this`
         this.change(100);
         console.log(this.value); // 100
+
+        // will read from the static
+        console.log(this.field); // 9548693458
+
+        this.field = 10;
+        console.log(StaticClass.field); // 10
     }
 
     // declare for static requires typeof
     declare add: typeof StaticClass.add;
     // OmitFirst<> to omit the first argument for this
     declare change: OmitFirst<typeof StaticClass.change>;
+    // the field will be accessible and writable
+    declare field: typeof StaticClass.field;
 }
 ```
+#### Instance

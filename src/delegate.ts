@@ -91,6 +91,14 @@ export type DelegateStatic<T extends readonly any[], Self> =
       : DelegateStatic<Rest, Self>
     : {};
 
+function setField(self: any, candidate: any, key: string, metadata: DelegationMap) {
+    const [get, set] = metadata.get(key)!;
+    Object.defineProperty(self, key, {
+        get: get ? () => candidate[key] : () => undefined,
+        set: set ? (v) => candidate[key] = v : () => { },
+    });
+}
+
 /**
  * Adds instanced delegated methods to a class; called during runtime
  * @param self Instance to add delegated methods to
@@ -120,9 +128,25 @@ export type DelegateStatic<T extends readonly any[], Self> =
  */
 export function delegate(self: any, delegateCandidates: any[]) {
     for(const candidate of delegateCandidates) {
-        for (const key of Object.getOwnPropertyNames(Object.getPrototypeOf(candidate))) {
-            if(!candidate[key].isDelegated) continue;
+        const proto = Object.getPrototypeOf(candidate);
+
+        for (const key of Object.getOwnPropertyNames(proto)) {
+            if (!candidate[key].isDelegated) {
+                continue;
+            }
             self[key] = candidate[key].bind(candidate);
+        }
+
+        if(!delegationMetadata.has(proto)) continue;
+        const metadata = delegationMetadata.get(proto)!;
+
+        for(const key in candidate) {
+            // skip if not delegated
+            if (!metadata.has(key))
+                continue;
+            
+            // define properties
+            setField(self, candidate, key, metadata);
         }
     }
 }
@@ -152,9 +176,16 @@ export function delegate(self: any, delegateCandidates: any[]) {
  */
 export function delegateStatic(self: any, delegateCandidates: any[]) {
     for(const candidate of delegateCandidates) {
+        const metadata = delegationMetadata.get(candidate);
         for (const key in candidate) {
             const val = candidate[key];
-            if (typeof val != "function" || !val.isDelegated) continue;
+            if (typeof val != "function") {
+                if(metadata == undefined) continue;
+                if(!metadata.has(key)) continue;
+                setField(self, candidate, key, metadata);
+                continue;
+            }
+            if(!val.isDelegated) continue;
 
             self[key] = (...args: any[]) => val.apply(candidate, val.omitFirst ? [self, ...args] : args);
         }
@@ -162,7 +193,7 @@ export function delegateStatic(self: any, delegateCandidates: any[]) {
 }
 
 /**
- * Annotate methods with this to set them to delegate into other methods
+ * Annotate methods with this to mark them to delegate into classes
  * @param omitFirst If true, the first argument of this method will be omitted when delegating
  *                  to the target method. It will be replaced with the instance of the class that delegated it.
  *                  This only applies for static methods.
@@ -185,5 +216,41 @@ export function DelegateMethod(omitFirst: boolean = false): MethodDecorator {
     return (_: Object, __: string | symbol, descriptor: PropertyDescriptor) => {
         (descriptor.value as any).isDelegated = true;
         (descriptor.value as any).omitFirst = omitFirst;
+    };
+}
+
+type DelegationMeta = [
+    get: boolean,
+    set: boolean,
+];
+type DelegationMap = Map<string | symbol, DelegationMeta>;
+
+const delegationMetadata = new WeakMap<Object, DelegationMap>();
+
+/**
+ * Annotate fields with this to mark them to delegate into other classes
+ * @param get If the field can be retrieved from the delegated class
+ * @param set If the field can be set from the delegated class
+ * 
+ * @example
+ * ```ts
+ * class Example {
+ *   @DelegateField() // an instance delegating this method will be able to use this.field1
+ *   field1: number = 100;
+ * 
+ *   @DelegateField(true, false) // it can be read from the delegated class, but not set
+ *   field2: string = "CONSTANT";
+ * }
+ * ```
+ */
+export function DelegateField(
+    get: boolean = true,
+    set: boolean = true,
+): PropertyDecorator & MethodDecorator {
+    return (target: Object, propertyKey: string | symbol, _?: PropertyDescriptor) => {
+        if (!delegationMetadata.has(target)) {
+            delegationMetadata.set(target, new Map());
+        }
+        delegationMetadata.get(target)!.set(propertyKey, [get, set]);
     };
 }
